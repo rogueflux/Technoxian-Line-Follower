@@ -1,0 +1,110 @@
+#include <unistd.h>
+#include <iostream>
+#include <pigpio.h>
+#include <string>
+#include <sstream>
+#include <chrono>
+#include <thread>
+#include <gtkmm.h>
+
+using namespace std;
+
+int main(int argc, char *argv[]) {
+    if (gpioInitialise() < 0) {
+        cout << "GPIO Initialization failed." << endl;
+        return 1;
+    }
+
+    int motorPin1 = 17;
+    int motorPin2 = 18;
+    int switchPin = 27;
+    gpioSetMode(motorPin1, PI_OUTPUT);
+    gpioSetMode(motorPin2, PI_OUTPUT);
+    gpioSetMode(switchPin, PI_OUTPUT);
+
+    double motorSpeedForward = 0;
+    double motorSpeedBackward = 0;
+
+    auto toggleSwitch = [&switchPin]() {
+        if (gpioRead(switchPin) == 0) {
+            gpioWrite(switchPin, 1);
+        } else {
+            gpioWrite(switchPin, 0);
+        }
+    };
+
+    auto forwardSpeedIncrease = [&motorPin1, &motorPin2, &motorSpeedForward]() {
+        motorSpeedForward += 0.1;
+        if (motorSpeedForward >= 1) {
+            motorSpeedForward = 1;
+        }
+        gpioPWM(motorPin1, motorSpeedForward * 255);
+        gpioPWM(motorPin2, 0);
+    };
+
+    auto forwardSpeedReduce = [&motorPin1, &motorPin2, &motorSpeedForward]() {
+        motorSpeedForward -= 0.1;
+        if (motorSpeedForward <= 0) {
+            motorSpeedForward = 0;
+        }
+        gpioPWM(motorPin1, motorSpeedForward * 255);
+        gpioPWM(motorPin2, 0);
+    };
+
+    auto backwardSpeedIncrease = [&motorPin1, &motorPin2, &motorSpeedBackward]() {
+        motorSpeedBackward += 0.1;
+        if (motorSpeedBackward >= 1) {
+            motorSpeedBackward = 1;
+        }
+        gpioPWM(motorPin1, 0);
+        gpioPWM(motorPin2, motorSpeedBackward * 255);
+    };
+
+    auto backwardSpeedReduce = [&motorPin1, &motorPin2, &motorSpeedBackward]() {
+        motorSpeedBackward -= 0.1;
+        if (motorSpeedBackward <= 0) {
+            motorSpeedBackward = 0;
+        }
+        gpioPWM(motorPin1, 0);
+        gpioPWM(motorPin2, motorSpeedBackward * 255);
+    };
+
+    Gtk::Main kit(argc, argv);
+    Gtk::Window window;
+    window.set_title("GUI Development");
+    window.set_default_size(800, 600);
+
+    Gtk::Grid grid;
+    window.add(grid);
+
+    Gtk::Label message("Single Motor Control Interface");
+    grid.attach(message, 4, 0, 1, 1);
+
+    Gtk::Button button0("Start");
+    button0.signal_clicked().connect(sigc::ptr_fun(&toggleSwitch));
+    grid.attach(button0, 4, 1, 1, 1);
+
+    Gtk::Button button1("+");
+    button1.signal_clicked().connect(sigc::ptr_fun(&forwardSpeedIncrease));
+    grid.attach(button1, 3, 2, 1, 1);
+
+    Gtk::Button button2("-");
+    button2.signal_clicked().connect(sigc::ptr_fun(&forwardSpeedReduce));
+    grid.attach(button2, 5, 2, 1, 1);
+
+    Gtk::Button button3("+");
+    button3.signal_clicked().connect(sigc::ptr_fun(&backwardSpeedIncrease));
+    grid.attach(button3, 3, 3, 1, 1);
+
+    Gtk::Button button4("-");
+    button4.signal_clicked().connect(sigc::ptr_fun(&backwardSpeedReduce));
+    grid.attach(button4, 5, 3, 1, 1);
+
+    window.show_all();
+
+    Gtk::Main::run(window);
+
+    gpioTerminate();
+
+    return 0;
+}
