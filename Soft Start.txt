@@ -1,5 +1,3 @@
-/* DC MOTOR SOFT STARTER USING ARDUINO BY A. SAMIUDDHIN */
-
 const int motorpin = 9; // Motor connected to Digital Pin 9
 const int RLED = 6;   // Red colour of the Bicolour LED connected to Digital Pin 6 
 const int GLED = 7;   // Green colour of the Bicolour LED connected to Digital Pin 7
