@@ -1,0 +1,154 @@
+// Motor control pins
+#define ENA 5   // PWM pin for right motor speed
+#define ENB 6   // PWM pin for left motor speed
+#define IN1 7   // Right motor forward
+#define IN2 8   // Right motor backward
+#define IN3 9   // Left motor forward
+#define IN4 10  // Left motor backward
+
+// IR Sensor pins (L2, L1, CL, CR, R1, R2, FAR_L, FAR_R)
+const int sensorPins[8] = {2, 3, 4, 5, 6, 7, 8, 9};
+
+// Sensor binary pattern and movement cases
+unsigned char sensorValue = 0;
+
+void setup() {
+  // Initialize sensor pins
+  for(int i=0; i<8; i++){
+    pinMode(sensorPins[i], INPUT);
+  }
+  
+  // Initialize motor control pins
+  pinMode(ENA, OUTPUT);
+  pinMode(ENB, OUTPUT);
+  pinMode(IN1, OUTPUT);
+  pinMode(IN2, OUTPUT);
+  pinMode(IN3, OUTPUT);
+  pinMode(IN4, OUTPUT);
+  
+  Serial.begin(9600); // For debugging
+}
+
+void loop() {
+  // Read sensor values and create binary pattern
+  sensorValue = 0;
+  for(int i=0; i<8; i++){
+    sensorValue |= (!digitalRead(sensorPins[i])) << i;
+  }
+
+  // Execute movement based on pattern
+  switch(sensorValue){
+    // Full line detection (all sensors active)
+    case 0b11111111:
+      goStraight();
+      break;
+      
+    // Straight path cases
+    case 0b00011000:  // Center sensors
+    case 0b00111100:
+      goStraight();
+      break;
+
+    // Right turns
+    case 0b00001100:  // Slight right
+      turnRight(30);
+      break;
+    case 0b00000110:  // Medium right
+      turnRight(60);
+      break;
+    case 0b00000011:  // Sharp right
+      turnRight(90);
+      break;
+
+    // Left turns
+    case 0b00110000:  // Slight left
+      turnLeft(30);
+      break;
+    case 0b01100000:  // Medium left
+      turnLeft(60);
+      break;
+    case 0b11000000:  // Sharp left
+      turnLeft(90);
+      break;
+
+    // Extreme cases
+    case 0b11100000:  // Far left
+      sharpLeft();
+      break;
+    case 0b00000111:  // Far right
+      sharpRight();
+      break;
+
+    // Stop condition
+    case 0b00000000:
+      stop();
+      break;
+
+    // Default case (minor adjustments)
+    default:
+      adjustMovement(sensorValue);
+      break;
+  }
+}
+
+// Movement functions
+void goStraight(){
+  digitalWrite(IN1, HIGH);
+  digitalWrite(IN2, LOW);
+  digitalWrite(IN3, HIGH);
+  digitalWrite(IN4, LOW);
+  analogWrite(ENA, 200); // Adjust speed as needed
+  analogWrite(ENB, 200);
+}
+
+void turnRight(int angle){
+  digitalWrite(IN1, HIGH);
+  digitalWrite(IN2, LOW);
+  digitalWrite(IN3, HIGH);
+  digitalWrite(IN4, LOW);
+  analogWrite(ENA, map(angle, 0, 90, 150, 50)); // Right motor speed decreases
+  analogWrite(ENB, 200); // Left motor maintains speed
+}
+
+void turnLeft(int angle){
+  digitalWrite(IN1, HIGH);
+  digitalWrite(IN2, LOW);
+  digitalWrite(IN3, HIGH);
+  digitalWrite(IN4, LOW);
+  analogWrite(ENA, 200); // Right motor maintains speed
+  analogWrite(ENB, map(angle, 0, 90, 150, 50)); // Left motor speed decreases
+}
+
+void sharpLeft(){
+  digitalWrite(IN1, HIGH);  // Right motor forward
+  digitalWrite(IN2, LOW);
+  digitalWrite(IN3, LOW);   // Left motor backward
+  digitalWrite(IN4, HIGH);
+  analogWrite(ENA, 200);
+  analogWrite(ENB, 200);
+}
+
+void sharpRight(){
+  digitalWrite(IN1, LOW);   // Right motor backward
+  digitalWrite(IN2, HIGH);
+  digitalWrite(IN3, HIGH);  // Left motor forward
+  digitalWrite(IN4, LOW);
+  analogWrite(ENA, 200);
+  analogWrite(ENB, 200);
+}
+
+void stop(){
+  digitalWrite(IN1, LOW);
+  digitalWrite(IN2, LOW);
+  digitalWrite(IN3, LOW);
+  digitalWrite(IN4, LOW);
+  analogWrite(ENA, 0);
+  analogWrite(ENB, 0);
+}
+
+void adjustMovement(unsigned char pattern){
+  // Add custom adjustments for specific patterns here
+  // Example: gentle curves or recovery patterns
+  if(pattern & 0b11110000) turnLeft(20);
+  else if(pattern & 0b00001111) turnRight(20);
+}
