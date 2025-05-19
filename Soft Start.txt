@@ -1,0 +1,74 @@
+/* DC MOTOR SOFT STARTER USING ARDUINO BY A. SAMIUDDHIN */
+
+const int motorpin = 9; // Motor connected to Digital Pin 9
+const int RLED = 6;   // Red colour of the Bicolour LED connected to Digital Pin 6 
+const int GLED = 7;   // Green colour of the Bicolour LED connected to Digital Pin 7
+const int ON = 2;     // ON button connected to Digital Pin 2
+const int OFF = 3;    // OFF button connected to Digital Pin 3
+int button1;
+int button2;
+boolean previousstate = false;  // Previous state of the motor
+boolean currentstate;      // Current state of the motor
+int n;
+int m;
+int soft[] = {0,25,50,75,100,125,150,175,200,225};  // PWM values
+void setup() {
+Serial.begin(9600);
+pinMode(motorpin, OUTPUT);
+pinMode(RLED, OUTPUT);
+pinMode(GLED, OUTPUT);
+pinMode(ON, INPUT);
+pinMode(OFF, INPUT);
+digitalWrite(RLED, LOW);
+digitalWrite(GLED, LOW);
+}
+
+void loop() 
+{
+button1 = digitalRead(ON);
+button2 = digitalRead(OFF);
+if ((button1 == LOW) && (previousstate == false))
+{
+on(); // calls "on" function
+previousstate = currentstate;
+}
+if ((button2 == LOW) && (previousstate == true))
+{
+off(); // calls "off" function
+previousstate = currentstate;
+}
+}
+void on()      // Function for Softstart
+{
+  digitalWrite(RLED, LOW);
+  digitalWrite(GLED, HIGH);
+  for (n=0; n<10; n++)
+    {
+      analogWrite(motorpin, soft[n]);
+      Serial.println(soft[n]);
+      delay(1000);
+     }
+  digitalWrite(motorpin, HIGH);
+  Serial.println("FULLY ON");
+  digitalWrite(RLED, HIGH);
+  digitalWrite(GLED, HIGH);
+  currentstate = true;
+}
+void off()      // Function for Softstop
+{
+  digitalWrite(RLED, HIGH);
+  digitalWrite(GLED, LOW);
+  for (m=9; m>0; m--)
+    {
+      analogWrite(motorpin, soft[m]);
+      Serial.println(soft[m]);
+      delay(1000);
+    }
+  digitalWrite(motorpin, LOW);
+  Serial.println("FULLY OFF");
+  digitalWrite(RLED, LOW);
+  digitalWrite(GLED, LOW);
+  pinMode(OFF, OUTPUT);
+  digitalWrite(OFF, HIGH);
+  currentstate = false;
+}
